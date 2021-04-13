@@ -2,7 +2,152 @@ doctype html
 html
   head
     style.
+      html, body, #viewport {
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: radial-gradient(#455, #234);
+      }
+      #viewport {
+        perspective: 1000px;
+      }
+      #viewport * {
+        transform-style: preserve-3d;
+      }
+
+      #camera {
+        transform-origin: 50% 50% 1000px;
+      }
+
+      #camera, #world, #world * {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+      }
+
+      #world * {
+        transform-origin: 50% 50%;
+      }
+      .face {
+        box-sizing: border-box;
+        border: 5px solid white;
+        width: 500px;
+        height: 500px;
+        background: linear-gradient(#434, #949);
+      }
+
   body
-    script.
-      console.log('Hello pug.');
+    #viewport
+      #camera
+        #world
+          .cube
+            .face
+            .face
+            .face
+            .face
     script(src="index.js")
+    script.
+      const $ = document.querySelector.bind(document);
+      const $$ = document.querySelectorAll.bind(document);
+
+      const pos = [0,0,0];
+      const rot = [0,0,0];
+
+      const orient = ($el, [[x, y, z], [rx, ry, rz]]) =>
+        Object.assign($el.style, {
+          transform: `translate3d(${x}px, ${y}px, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz})`,
+        });
+
+      const orientAll = ($els, posRots) => posRots.forEach((posRot, i) => orient($els[i], posRot));
+
+      orient($('.cube'), [
+        [-250, -250, 0],
+        [0,0,0],
+      ]);
+
+      orientAll($$('.cube .face'), [
+        [[-250,0,0], [0,90,0]],
+        [[250,0,0], [0,90,0]],
+        [[0,250,0], [90,0,0]],
+        [[0,-250,0], [90,0,0]],
+      ]);
+
+      const eventable = {
+        bindEvents() {
+          for (let event in this.events) {
+            if (event[0] !== '_') {
+              document.addEventListener(event, this.events[event]);
+            }
+          }
+        },
+      };
+
+      const pressable = (down, up, code) => {
+        const _pressed = {};
+        const event = {
+          [down]: e => _pressed[e[code]] = _pressed.any = true,
+          [up]: e => _pressed[e[code]] = _pressed.any = false,
+          _pressed,
+        }
+        return event;
+      }
+
+      const mouse = {
+        ...eventable,
+        events: {
+          ...pressable('mousedown', 'mouseup', 'which'),
+          mousemove: ({ movementX, movementY }) => {
+            if (!mouse.events._pressed.any) return;
+            orient($('#camera'), [
+              [0,0,0],
+              [
+                (rot[0] -= movementY),
+                (rot[1] += movementX),
+                0,
+              ],
+            ]);
+          },
+        },
+      };
+
+      const { cos, sin, PI } = Math;
+      const rad = deg => deg * PI /180;
+      const xc = ([x, _, z], ry) => cos(rad(ry))*x + sin(rad(ry))*z;
+      const yc = ([x, _, z], ry) => sin(rad(ry))*x - cos(rad(ry))*z;
+
+      const advance = vel => orient($('#world'), [
+        [
+          (pos[0] += xc(vel, rot[1])),
+          (pos[1] += vel[1]),
+          (pos[2] += yc(vel, rot[1])),
+        ],
+        [0,0,0],
+      ])
+
+      const kb = {
+        ...eventable,
+        events: { ...pressable('keydown', 'keyup', 'code') },
+        actions: {
+          KeyW: () => advance([0,0,-30]),
+          KeyS: () => advance([0,0,30]),
+          KeyA: () => advance([30,0,0]),
+          KeyD: () => advance([-30,0,0]),
+          ShiftLeft: () => advance([0,-30,0]),
+          ShiftRight: () => advance([0,-30,0]),
+          Space: () => advance([0,30,0]),
+        },
+        run() {
+          for (let pressed in this.events._pressed) {
+            this.events._pressed[pressed] && this.actions[pressed] && this.actions[pressed]();
+          }
+          window.requestAnimationFrame(() => this.run());
+        },
+      };
+
+
+      kb.bindEvents();
+      mouse.bindEvents();
+      kb.run();
