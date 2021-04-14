@@ -1,3 +1,36 @@
+html, body, .viewport {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
 body {
-  background: #b34;
+  background: radial-gradient(#955, #234);
+}
+.viewport {
+  perspective: 1000px;
+}
+.viewport * {
+  transform-style: preserve-3d;
+}
+
+.camera {
+  transform-origin: 50% 50% 1000px;
+}
+
+.camera, .world, .world * {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.world * {
+  transform-origin: 50% 50%;
+}
+.face {
+  box-sizing: border-box;
+  border: 5px solid white;
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(#484, #949);
 }
